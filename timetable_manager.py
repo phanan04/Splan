@@ -240,6 +240,23 @@ class TimetableManager:
             items.insert(new_index, item)
             self._save_timetable()
 
+    def swap_subject_content(self, day: str, idx_a: int, idx_b: int) -> None:
+        """Hoán đổi nội dung môn học giữa 2 vị trí, giữ nguyên giờ của từng slot."""
+        if day not in self.schedule:
+            return
+        items = self.schedule[day]
+        if not (0 <= idx_a < len(items) and 0 <= idx_b < len(items)):
+            return
+        # Lưu lại startTime của từng vị trí
+        time_a = items[idx_a]['startTime']
+        time_b = items[idx_b]['startTime']
+        # Hoán đổi toàn bộ dữ liệu môn
+        items[idx_a], items[idx_b] = items[idx_b], items[idx_a]
+        # Khôi phục startTime cho từng vị trí
+        items[idx_a]['startTime'] = time_a
+        items[idx_b]['startTime'] = time_b
+        self._save_timetable()
+
     def get_subject_work_duration(self, subject_entry: dict) -> int:
         """Lấy work duration (phút) cho 1 môn. Fallback to global."""
         return subject_entry.get('workMinutes', 0) or self.get_work_duration()
@@ -256,6 +273,21 @@ class TimetableManager:
         }
         with open(self.timetable_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def cascade_start_times(self, day: str, from_index: int = 1) -> None:
+        """Recalculate start times for all subjects from from_index onwards,
+        chaining each subject's start = previous subject's end."""
+        classes = self.schedule.get(day, [])
+        if from_index <= 0:
+            from_index = 1
+        if from_index >= len(classes):
+            return
+        for i in range(from_index, len(classes)):
+            prev = classes[i - 1]
+            prev_start = datetime.strptime(prev['startTime'], '%H:%M')
+            prev_end = prev_start + timedelta(minutes=prev['duration'])
+            classes[i]['startTime'] = prev_end.strftime('%H:%M')
+        self._save_timetable()
 
     def reload(self) -> None:
         """Tải lại dữ liệu từ file"""

@@ -30,7 +30,7 @@ from PyQt5.QtCore import (
 )
 from PyQt5.QtGui import (
     QFont, QColor, QCursor, QIcon, QKeySequence,
-    QPainter, QLinearGradient, QBrush, QPen, QPainterPath,
+    QPainter, QLinearGradient, QRadialGradient, QBrush, QPen, QPainterPath,
     QPixmap, QPalette, QDrag,
 )
 
@@ -62,7 +62,7 @@ _SETTINGS_FILE = os.path.join(_user_data_dir(), 'settings.json')
 
 def _load_settings() -> dict:
     defaults = {
-        'darkMode': False,
+        'darkMode': True,
         'alwaysOnTop': False,
         'soundEnabled': True,
         'minimizeToTray': True,
@@ -107,8 +107,8 @@ LIGHT = {
     'orange':         '#E08800',
     'orange_bg':      '#F0E0C0',
     'text':           '#1A1A24',
-    'text_secondary': '#50505C',
-    'text_muted':     '#808090',
+    'text_secondary': '#3A3A4C',
+    'text_muted':     '#5A5A6E',
     'shadow':         (0, 0, 0, 30),
     'shadow_card':    (0, 0, 0, 20),
     'top_gradient_1': '#5B5FC7',
@@ -122,43 +122,52 @@ LIGHT = {
     'gauge_tick':     '#9090A0',
     'panel_top':      '#DCDCE2',
     'panel_bot':      '#C4C4CC',
+    'title_bg_1':     '#D8D8DE',
+    'title_bg_2':     '#B8B8C4',
+    'title_text':     '#1A1A24',
+    'title_accent':   '#5B5FC7',
 }
 
 DARK = {
-    'bg':             '#0A0A10',
-    'surface':        '#141420',
-    'surface_hover':  '#1C1C2C',
-    'surface_active': '#1E1E34',
-    'surface_done':   '#142018',
-    'border':         '#2C2C3C',
-    'border_light':   '#3A3A4C',
-    'border_subtle':  '#1A1A28',
-    'accent':         '#7B7FDE',
-    'accent_hover':   '#9195E8',
-    'accent_light':   '#1E1E38',
+    'bg':             '#0C0C0C',     # Near-black background
+    'surface':        '#1A1A1A',     # Panels
+    'surface_hover':  '#252525',
+    'surface_active': '#202020',
+    'surface_done':   '#0F1C12',
+    'border':         '#3A3A3A',     # Metallic border
+    'border_light':   '#585858',     # Lighter metallic highlight
+    'border_subtle':  '#222222',
+    'accent':         '#CC0000',     # MSI Dragon Red
+    'accent_hover':   '#E01A00',
+    'accent_light':   '#1E0505',
     'accent_text':    '#FFFFFF',
-    'green':          '#4ADE80',
-    'green_bg':       '#142018',
-    'red':            '#F87171',
-    'red_bg':         '#2C1818',
-    'orange':         '#FBBF24',
-    'orange_bg':      '#2C2818',
-    'text':           '#D0D0DC',
-    'text_secondary': '#808098',
-    'text_muted':     '#4A4A5C',
-    'shadow':         (0, 0, 0, 60),
-    'shadow_card':    (0, 0, 0, 45),
-    'top_gradient_1': '#5B5FC7',
-    'top_gradient_2': '#7C3AED',
-    'heatmap_0':      '#141420',
-    'heatmap_1':      '#0E4429',
-    'heatmap_2':      '#006D32',
-    'heatmap_3':      '#26A641',
-    'heatmap_4':      '#39D353',
-    'gauge_bg':       '#10101A',
-    'gauge_tick':     '#3A3A50',
-    'panel_top':      '#1C1C2C',
-    'panel_bot':      '#101018',
+    'green':          '#22E055',     # Neon green
+    'green_bg':       '#0C1A10',
+    'red':            '#FF2200',
+    'red_bg':         '#220A0A',
+    'orange':         '#FF7700',
+    'orange_bg':      '#2A1500',
+    'text':           '#F0F0F0',
+    'text_secondary': '#AAAAAA',
+    'text_muted':     '#606060',
+    'shadow':         (0, 0, 0, 140),
+    'shadow_card':    (0, 0, 0, 90),
+    'top_gradient_1': '#880000',     # Deep red accent strip
+    'top_gradient_2': '#440000',
+    'heatmap_0':      '#161616',
+    'heatmap_1':      '#3D0A0A',
+    'heatmap_2':      '#6B1010',
+    'heatmap_3':      '#A01818',
+    'heatmap_4':      '#CC2020',
+    'gauge_bg':       '#040404',     # Deep-black gauge interior
+    'gauge_tick':     '#484848',     # Metallic tick marks
+    'panel_top':      '#2A2A2A',     # Gunmetal top
+    'panel_bot':      '#141414',     # Near-black bottom
+    # extras for the title bar
+    'title_bg_1':     '#1E1E1E',
+    'title_bg_2':     '#0A0A0A',
+    'title_text':     '#FFFFFF',
+    'title_accent':   '#CC0000',
 }
 
 
@@ -294,115 +303,141 @@ class CircularTimer(QWidget):
         w, h = self.width(), self.height()
         side = min(w, h)
         cx, cy = w / 2, h / 2
-        margin = max(8, side * 0.08)
+        margin = max(8, side * 0.07)
         radius = side / 2 - margin
-        ring_w = max(4, side * 0.045)
-        time_fs = max(13, int(side * 0.17))
-        label_fs = max(7, int(side * 0.065))
-        tick_len_major = max(6, side * 0.07)
-        tick_len_minor = max(3, side * 0.035)
+        ring_w = max(7, side * 0.07)
+        time_fs = max(13, int(side * 0.185))
+        label_fs = max(7, int(side * 0.068))
 
-        # ── Gauge background circle ──
-        if self._gauge_bg:
-            bg_grad = QLinearGradient(cx, cy - radius, cx, cy + radius)
-            bg_c = QColor(self._gauge_bg)
-            bg_c2 = QColor(self._gauge_bg)
-            bg_c2 = bg_c2.lighter(120)
-            bg_grad.setColorAt(0, bg_c2)
-            bg_grad.setColorAt(1, bg_c)
-            p.setPen(Qt.NoPen)
-            p.setBrush(QBrush(bg_grad))
-            p.drawEllipse(QRectF(cx - radius - 2, cy - radius - 2,
-                                 (radius + 2) * 2, (radius + 2) * 2))
-
-        # ── Outer ring (subtle border) ──
-        outer_pen = QPen(QColor(self._track))
-        outer_pen.setWidthF(max(1.5, side * 0.012))
-        p.setPen(outer_pen)
-        p.setBrush(Qt.NoBrush)
-        outer_r = radius + ring_w / 2 + 1
-        p.drawEllipse(QRectF(cx - outer_r, cy - outer_r, outer_r * 2, outer_r * 2))
-
-        # ── Tick marks (60 ticks like a clock, every 5th is major) ──
-        tick_c = QColor(self._tick_color if self._tick_color else self._track)
         accent_c = QColor(self._accent)
-        num_ticks = 60
-        for i in range(num_ticks):
-            angle_deg = i * (360.0 / num_ticks) - 90  # start from top
-            angle_rad = math.radians(angle_deg)
-            is_major = (i % 5 == 0)
-            tl = tick_len_major if is_major else tick_len_minor
-            tw = (max(1.5, side * 0.012) if is_major
-                  else max(0.8, side * 0.006))
+        track_c  = QColor(self._track)
 
-            r_outer = radius - 1
-            r_inner = radius - 1 - tl
+        # Detect light vs dark mode from gauge background luminance
+        face_bg = QColor(self._gauge_bg) if self._gauge_bg else QColor('#0A0A0A')
+        _r, _g, _b = face_bg.red(), face_bg.green(), face_bg.blue()
+        _lum = (_r * 299 + _g * 587 + _b * 114) / 1000
+        is_light = _lum > 128
 
-            x1 = cx + r_outer * math.cos(angle_rad)
-            y1 = cy + r_outer * math.sin(angle_rad)
-            x2 = cx + r_inner * math.cos(angle_rad)
-            y2 = cy + r_inner * math.sin(angle_rad)
-
-            # Color active ticks based on progress
-            tick_frac = i / num_ticks
-            if tick_frac <= self._progress and self._progress > 0.001:
-                tc = accent_c
-                tc_alpha = QColor(tc)
-                tc_alpha.setAlpha(220)
-                tick_pen = QPen(tc_alpha)
-            else:
-                tick_pen = QPen(tick_c)
-                if not is_major:
-                    tc2 = QColor(tick_c)
-                    tc2.setAlpha(100)
-                    tick_pen = QPen(tc2)
-
-            tick_pen.setWidthF(tw)
-            tick_pen.setCapStyle(Qt.RoundCap)
-            p.setPen(tick_pen)
-            p.drawLine(QPointF(x1, y1), QPointF(x2, y2))
-
-        # ── Track ring ──
-        track_pen = QPen(QColor(self._track))
-        track_pen.setWidthF(ring_w)
-        track_pen.setCapStyle(Qt.RoundCap)
-        p.setPen(track_pen)
+        # ── 1. Outer drop-shadow ring ──
+        face_r = radius + ring_w * 0.5 + max(2, side * 0.015)
+        shadow_c = QColor(0, 0, 0, 22 if is_light else 60)
+        shad_pen = QPen(shadow_c)
+        shad_pen.setWidthF(max(2.5, side * 0.02))
+        p.setPen(shad_pen)
         p.setBrush(Qt.NoBrush)
-        arc_r = radius - tick_len_major - 3
+        p.drawEllipse(QRectF(cx - face_r - 1, cy - face_r - 1,
+                             (face_r + 1) * 2, (face_r + 1) * 2))
+
+        # ── 2. Gauge face with off-center radial gradient ──
+        rad_grad = QRadialGradient(cx - side * 0.08, cy - side * 0.08,
+                                   face_r * 1.3)
+        if is_light:
+            rad_grad.setColorAt(0.0, QColor('#FFFFFF'))
+            rad_grad.setColorAt(0.45, face_bg.lighter(106))
+            rad_grad.setColorAt(1.0, face_bg.darker(104))
+        else:
+            center_col = QColor(min(_r + 22, 255),
+                                min(_g + 22, 255),
+                                min(_b + 22, 255))
+            rad_grad.setColorAt(0.0, center_col)
+            rad_grad.setColorAt(0.55, face_bg)
+            rad_grad.setColorAt(1.0, face_bg.darker(118))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(rad_grad))
+        p.drawEllipse(QRectF(cx - face_r, cy - face_r,
+                             face_r * 2, face_r * 2))
+
+        # ── 3. Subtle inner border ring ──
+        bdr_c = QColor(accent_c)
+        bdr_c.setAlpha(35 if is_light else 55)
+        bdr_pen = QPen(bdr_c)
+        bdr_pen.setWidthF(max(0.8, side * 0.007))
+        p.setPen(bdr_pen)
+        p.setBrush(Qt.NoBrush)
+        p.drawEllipse(QRectF(cx - face_r + 0.5, cy - face_r + 0.5,
+                             face_r * 2 - 1, face_r * 2 - 1))
+
+        # ── 4. Track arc ──
+        arc_r = radius
         arc_rect = QRectF(cx - arc_r, cy - arc_r, arc_r * 2, arc_r * 2)
+        trk_c = QColor(track_c)
+        trk_c.setAlpha(48 if is_light else 55)
+        trk_pen = QPen(trk_c)
+        trk_pen.setWidthF(ring_w)
+        trk_pen.setCapStyle(Qt.RoundCap)
+        p.setPen(trk_pen)
+        p.setBrush(Qt.NoBrush)
         p.drawEllipse(arc_rect)
 
-        # ── Progress arc (glowing) ──
+        # ── 5. Progress arc with glow + endpoint dot ──
         if self._progress > 0.001:
-            # Glow layer
-            glow_c = QColor(self._accent)
-            glow_c.setAlpha(40)
-            glow_pen = QPen(glow_c)
-            glow_pen.setWidthF(ring_w + 6)
-            glow_pen.setCapStyle(Qt.RoundCap)
-            p.setPen(glow_pen)
-            p.drawArc(arc_rect, 90 * 16, -int(self._progress * 360 * 16))
+            span = -int(self._progress * 360 * 16)
 
-            # Main arc
-            arc_pen = QPen(QColor(self._accent))
+            # Outer glow
+            glow1 = QColor(accent_c); glow1.setAlpha(22)
+            gp1 = QPen(glow1); gp1.setWidthF(ring_w + 11)
+            gp1.setCapStyle(Qt.RoundCap); p.setPen(gp1)
+            p.drawArc(arc_rect, 90 * 16, span)
+
+            # Mid glow
+            glow2 = QColor(accent_c); glow2.setAlpha(46)
+            gp2 = QPen(glow2); gp2.setWidthF(ring_w + 4)
+            gp2.setCapStyle(Qt.RoundCap); p.setPen(gp2)
+            p.drawArc(arc_rect, 90 * 16, span)
+
+            # Solid arc
+            arc_pen = QPen(accent_c)
             arc_pen.setWidthF(ring_w)
             arc_pen.setCapStyle(Qt.RoundCap)
             p.setPen(arc_pen)
-            p.drawArc(arc_rect, 90 * 16, -int(self._progress * 360 * 16))
+            p.drawArc(arc_rect, 90 * 16, span)
 
-        # ── Time text ──
+            # Bright endpoint dot
+            tip_angle = math.radians(90.0 - self._progress * 360.0)
+            tip_x = cx + arc_r * math.cos(tip_angle)
+            tip_y = cy - arc_r * math.sin(tip_angle)
+            dot_r = ring_w * 0.36
+            tip_bright = accent_c.lighter(155)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(tip_bright))
+            p.drawEllipse(QRectF(tip_x - dot_r, tip_y - dot_r,
+                                 dot_r * 2, dot_r * 2))
+
+        # ── 6. Minimal tick marks (12 positions, 4 cardinal emphasized) ──
+        tick_c = QColor(self._tick_color if self._tick_color else self._track)
+        for i in range(12):
+            angle_deg = i * 30.0 - 90.0
+            angle_rad = math.radians(angle_deg)
+            is_cardinal = (i % 3 == 0)
+            tl = max(5, side * 0.042) if is_cardinal else max(2.5, side * 0.024)
+            tw = max(1.5, side * 0.012) if is_cardinal else max(0.8, side * 0.006)
+            r_out = face_r - max(2, side * 0.018)
+            r_in  = r_out - tl
+            x1 = cx + r_out * math.cos(angle_rad)
+            y1 = cy + r_out * math.sin(angle_rad)
+            x2 = cx + r_in  * math.cos(angle_rad)
+            y2 = cy + r_in  * math.sin(angle_rad)
+            tc = QColor(tick_c)
+            tc.setAlpha(130 if is_cardinal else 60)
+            tp = QPen(tc); tp.setWidthF(tw); tp.setCapStyle(Qt.RoundCap)
+            p.setPen(tp)
+            p.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+
+        # ── 7. Time text ──
         p.setPen(QColor(self._text_color))
-        p.setFont(QFont("Consolas", time_fs, QFont.Bold))
-        th = int(side * 0.25)
-        p.drawText(QRectF(0, cy - th // 2 - 2, w, th),
+        time_font = QFont("Consolas", time_fs, QFont.Bold)
+        p.setFont(time_font)
+        th = int(side * 0.28)
+        p.drawText(QRectF(0, cy - th * 0.62, w, th),
                    Qt.AlignCenter, self._time_text)
 
-        # ── Label ──
+        # ── 8. Label ──
         if self._label:
             p.setPen(QColor(self._label_color))
-            p.setFont(QFont("Segoe UI", label_fs))
-            p.drawText(QRectF(0, cy + th // 2 - 4, w, int(side * 0.15)),
-                       Qt.AlignCenter, self._label)
+            lbl_font = QFont("Segoe UI", label_fs, QFont.DemiBold)
+            p.setFont(lbl_font)
+            p.drawText(QRectF(0, cy + th * 0.42, w, int(side * 0.20)),
+                       Qt.AlignCenter, self._label.upper())
         p.end()
 
 
@@ -785,7 +820,7 @@ class SubjectCard(QFrame):
 # ═══════════════════════════════════════════════════════════
 class SubjectDialog(QDialog):
     def __init__(self, parent=None, title_key="dlg_add_title",
-                 subject="", start_time="08:00", duration=60,
+                 subject="", duration=60,
                  notes="", work_min=0, break_min=0, colors=None):
         super().__init__(parent)
         C = colors or LIGHT
@@ -829,11 +864,6 @@ class SubjectDialog(QDialog):
         self.name_input = QLineEdit(subject)
         self.name_input.setPlaceholderText(t('dlg_subject_placeholder'))
         form.addRow(t('dlg_subject_name'), self.name_input)
-
-        self.time_input = QTimeEdit()
-        self.time_input.setDisplayFormat("HH:mm")
-        self.time_input.setTime(QTime.fromString(start_time, "HH:mm"))
-        form.addRow(t('dlg_start_time'), self.time_input)
 
         self.dur_input = QSpinBox()
         self.dur_input.setRange(5, 480)
@@ -950,7 +980,6 @@ class SubjectDialog(QDialog):
         is_default = self.cb_default_pomo.isChecked()
         return {
             'subject': self.name_input.text().strip(),
-            'startTime': self.time_input.time().toString("HH:mm"),
             'duration': self.dur_input.value(),
             'notes': self.notes_input.text().strip(),
             'workMinutes': 0 if is_default else self.work_input.value(),
@@ -1469,20 +1498,35 @@ class StudyTimerApp(QMainWindow):
         bl = C.get('border_light', C['border'])
         self.centralWidget().setStyleSheet(f"background: {C['bg']};")
 
-        self.top_frame.setStyleSheet(f"""
-            QFrame#topBar {{
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                    stop:0 {pt}, stop:1 {pb});
-                border-top: 1px solid {bl};
-                border-bottom: 1px solid {C['bg']};
-            }}
-        """)
-        _shadow(self.top_frame, C['shadow'], 18, 4)
-
         g1, g2 = C['top_gradient_1'], C['top_gradient_2']
         self.accent_strip.setStyleSheet(
             f"background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            f"stop:0 {g1}, stop:1 {g2}); border: none;")
+            f"stop:0 {g1}, stop:0.5 {C['accent']}, stop:1 {g2}); border: none;")
+
+        # Title bar
+        _is_dark = self.settings.get('darkMode', True)
+        tb1 = C.get('title_bg_1', '#1E1E1E') if _is_dark else '#DCDCE2'
+        tb2 = C.get('title_bg_2', '#0A0A0A') if _is_dark else '#C0C0C8'
+        self.title_bar.setStyleSheet(f"""
+            QFrame#titleBar {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {tb1}, stop:1 {tb2});
+                border-bottom: 1px solid {C['accent']};
+            }}
+        """)
+        self.lbl_title_bar.setStyleSheet(
+            f"color: {C.get('title_text', C['text'])};"
+            f" background: transparent; border: none; letter-spacing: 3px;")
+
+        self.top_frame.setStyleSheet(f"""
+            QFrame#topBar {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {pt}, stop:0.5 {C['surface']}, stop:1 {pb});
+                border-top: 1px solid {bl};
+                border-bottom: 2px solid {C['accent']};
+            }}
+        """)
+        _shadow(self.top_frame, C['shadow'], 24, 6)
 
         self.timer_circle.set_colors(
             C['accent'], C['border'], C['text'], C['text_muted'])
@@ -1492,10 +1536,23 @@ class StudyTimerApp(QMainWindow):
             C['green'], C['border'], C['text'], C['text_muted'])
         self.subject_circle.set_gauge_style(C.get('gauge_bg'), C.get('gauge_tick'))
 
+        # Center panel
         self.lbl_subject.setStyleSheet(
-            f"color: {C['text']}; background: transparent;")
+            f"color: {C['text']}; background: transparent; letter-spacing: 0.5px;")
         self.lbl_status.setStyleSheet(
-            f"color: {C['text_secondary']}; background: transparent;")
+            f"color: {C['accent']}; background: transparent; letter-spacing: 1.5px;")
+
+        # Center recessed panel
+        self.center_panel.setStyleSheet(f"""
+            QFrame#centerPanel {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {C['bg']}, stop:1 {C['surface']});
+                border: 1px solid {C['border']};
+                border-top: 1px solid {bl};
+                border-radius: 4px;
+            }}
+        """)
+        _shadow(self.center_panel, C['shadow'], 10, 2)
 
         self._update_button_states()
 
@@ -1506,25 +1563,59 @@ class StudyTimerApp(QMainWindow):
                         stop:0 {C['surface_hover']}, stop:1 {C['surface']});
                     color: {C['text_secondary']};
                     border: 1px solid {C['border']};
-                    border-radius: 4px; padding: 0;
+                    border-bottom: 2px solid {C['border']};
+                    border-radius: 8px; padding: 0;
+                    font-size: 13px;
                 }}
                 QPushButton:hover {{
-                    background: {C['surface_hover']};
-                    color: {C['text']}; border-color: {bl};
+                    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                        stop:0 {C['accent']}, stop:1 {C['accent_hover']});
+                    color: #FFFFFF;
+                    border-color: {C['accent_hover']};
+                }}
+                QPushButton:pressed {{
+                    background: {C['accent_hover']};
                 }}
             """)
 
         self.lbl_pomo.setStyleSheet(
-            f"color: {C['text_muted']}; background: transparent;")
+            f"color: {C['text_muted']}; background: transparent; letter-spacing: 1px;")
         self.lbl_today_total.setStyleSheet(
-            f"color: {C['text_muted']}; background: transparent;")
+            f"color: {C['accent']}; background: transparent; letter-spacing: 1px;")
 
         self.btn_dark.setText('\u2600' if self.settings['darkMode'] else '\U0001f319')
         self.btn_dark.setToolTip(t('btn_light') if self.settings['darkMode'] else t('btn_dark'))
 
-        cb_style = f"color: {C['text_secondary']}; background: transparent;"
-        self.cb_pin.setStyleSheet(cb_style)
-        self.cb_auto.setStyleSheet(cb_style)
+        self._center_divider.setStyleSheet(
+            f"background: {C['accent']}; border: none; margin: 0 8px;")
+
+        _cb_style = f"""
+            QCheckBox {{
+                color: {C['text_secondary']};
+                background: transparent;
+                spacing: 5px;
+                font-size: 12px;
+            }}
+            QCheckBox::indicator {{
+                width: 14px; height: 14px;
+                border: 1px solid {C['border']};
+                border-radius: 3px;
+                background: {C['bg']};
+            }}
+            QCheckBox::indicator:checked {{
+                background: {C['accent']};
+                border-color: {C['accent']};
+                image: none;
+            }}
+            QCheckBox::indicator:hover {{
+                border-color: {C['accent']};
+            }}
+        """
+        self.cb_pin.setStyleSheet(_cb_style)
+        self.cb_auto.setStyleSheet(_cb_style.replace(
+            f"background: {C['accent']};\n                border-color: {C['accent']};",
+            f"background: {C['orange']};\n                border-color: {C['orange']};"
+        ))
 
         self.tabs_frame.setStyleSheet(f"""
             QFrame#tabStrip {{
@@ -1592,35 +1683,52 @@ class StudyTimerApp(QMainWindow):
         C = self.C
         state = self.engine.state
         has_subject = self.active_idx >= 0
-        pp = getattr(self, '_btn_pad_primary', 14)
-        ps = getattr(self, '_btn_pad_secondary', 10)
-        br = getattr(self, '_btn_radius', 8)
+        br = 3   # tight radius – industrial look
 
         # ── Primary button (Start / Pause / Resume) ──
         if state == TimerState.RUNNING:
             self.btn_primary.setText(f"⏸  {t('btn_pause')}")
             color = C['orange']
+            c_dark = '#AA5500'
         elif state == TimerState.PAUSED:
             self.btn_primary.setText(f"▶  {t('btn_resume')}")
             color = C['green']
+            c_dark = '#117733'
         elif state == TimerState.BREAK:
             self.btn_primary.setText(f"⏸  {t('state_break')}")
             color = C['orange']
+            c_dark = '#AA5500'
             self.btn_primary.setEnabled(False)
         else:
             self.btn_primary.setText(f"▶  {t('btn_start')}")
             color = C['green']
+            c_dark = '#117733'
         if state != TimerState.BREAK:
             self.btn_primary.setEnabled(True)
 
         self.btn_primary.setStyleSheet(f"""
             QPushButton {{
-                background: {color}; color: white;
-                border: none; border-radius: {br}px;
-                padding: 0 {pp}px;
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {color}, stop:1 {c_dark});
+                color: white;
+                border: 1px solid {c_dark};
+                border-top: 1px solid {color};
+                border-radius: {br}px;
+                padding: 0 18px;
+                font-weight: bold;
             }}
-            QPushButton:hover {{ background: {C.get('accent_hover', color)}; }}
-            QPushButton:disabled {{ background: {C['border']}; color: {C['text_muted']}; }}
+            QPushButton:hover {{
+                background: {color};
+                border-color: {color};
+            }}
+            QPushButton:pressed {{
+                background: {c_dark};
+                border-top: 2px solid {c_dark};
+            }}
+            QPushButton:disabled {{
+                background: {C['border']}; color: {C['text_muted']};
+                border-color: {C['border']};
+            }}
         """)
 
         # ── Stop button ──
@@ -1628,12 +1736,21 @@ class StudyTimerApp(QMainWindow):
         self.btn_stop.setVisible(is_active)
         self.btn_stop.setStyleSheet(f"""
             QPushButton {{
-                background: {C['bg']}; color: {C['red']};
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {C['surface_hover']}, stop:1 {C['bg']});
+                color: {C['red']};
                 border: 1px solid {C['border']};
-                border-radius: {br}px; padding: 0 {ps}px;
+                border-bottom: 2px solid {C['border']};
+                border-radius: {br}px; padding: 0 14px;
             }}
             QPushButton:hover {{
                 background: {C['red_bg']}; border-color: {C['red']};
+                color: {C['red']};
+            }}
+            QPushButton:pressed {{
+                background: {C['red_bg']};
+                border-bottom: 1px solid {C['border']};
+                border-top: 2px solid {C['border']};
             }}
         """)
 
@@ -1641,22 +1758,31 @@ class StudyTimerApp(QMainWindow):
         self.btn_finish.setVisible(has_subject and is_active)
         self.btn_finish.setStyleSheet(f"""
             QPushButton {{
-                background: {C['bg']}; color: {C['accent']};
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {C['surface_hover']}, stop:1 {C['bg']});
+                color: {C['accent']};
                 border: 1px solid {C['border']};
-                border-radius: {br}px; padding: 0 {ps}px;
+                border-bottom: 2px solid {C['border']};
+                border-radius: {br}px; padding: 0 14px;
             }}
             QPushButton:hover {{
                 background: {C['accent_light']}; border-color: {C['accent']};
+                color: {C['accent']};
+            }}
+            QPushButton:pressed {{
+                background: {C['accent_light']};
+                border-bottom: 1px solid {C['border']};
+                border-top: 2px solid {C['border']};
             }}
         """)
 
         # ── Pomodoro cycle label ──
         self.lbl_pomo.setStyleSheet(
-            f"color: {C['text_muted']}; background: transparent;")
+            f"color: {C['text_muted']}; background: transparent; letter-spacing: 1px;")
 
         # ── Today total label ──
         self.lbl_today_total.setStyleSheet(
-            f"color: {C['text_muted']}; background: transparent;")
+            f"color: {C['accent']}; background: transparent; letter-spacing: 1px;")
         self._update_today_total()
 
     def _update_today_total(self):
@@ -1719,14 +1845,55 @@ class StudyTimerApp(QMainWindow):
         root.setSpacing(0)
         root.setContentsMargins(0, 0, 0, 0)
 
-        # Accent strip
+        # ── Accent strip (thin top bar gradient) ──
         self.accent_strip = QFrame()
-        self.accent_strip.setFixedHeight(3)
+        self.accent_strip.setFixedHeight(4)
         g1, g2 = C['top_gradient_1'], C['top_gradient_2']
         self.accent_strip.setStyleSheet(
             f"background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            f"stop:0 {g1}, stop:1 {g2}); border: none;")
+            f"stop:0 {g1}, stop:0.5 {C['accent']}, stop:1 {g2}); border: none;")
         root.addWidget(self.accent_strip)
+
+        # ── MSI-style title bar ("STUDY TIMER" centered like "RADEON") ──
+        _is_dark = self.settings.get('darkMode', True)
+        if _is_dark:
+            tb1 = C.get('title_bg_1', '#1E1E1E')
+            tb2 = C.get('title_bg_2', '#0A0A0A')
+        else:
+            tb1 = '#DCDCE2'
+            tb2 = '#C0C0C8'
+        self.title_bar = QFrame()
+        self.title_bar.setObjectName("titleBar")
+        self.title_bar.setFixedHeight(30)
+        self.title_bar.setStyleSheet(f"""
+            QFrame#titleBar {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {tb1}, stop:1 {tb2});
+                border-bottom: 1px solid {C['accent']};
+            }}
+        """)
+        tb_lay = QHBoxLayout(self.title_bar)
+        tb_lay.setContentsMargins(16, 0, 16, 0)
+        tb_lay.setSpacing(8)
+
+        lbl_brand_dot = QLabel("●")
+        lbl_brand_dot.setFont(QFont("Segoe UI", 8))
+        lbl_brand_dot.setStyleSheet(f"color: {C['accent']}; background: transparent; border: none;")
+        tb_lay.addWidget(lbl_brand_dot)
+
+        self.lbl_title_bar = QLabel("STUDY TIMER")
+        self.lbl_title_bar.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.lbl_title_bar.setStyleSheet(
+            f"color: {C.get('title_text', C['text'])};"
+            f" background: transparent; border: none; letter-spacing: 3px;")
+        self.lbl_title_bar.setAlignment(Qt.AlignCenter)
+        tb_lay.addWidget(self.lbl_title_bar, stretch=1)
+
+        lbl_brand_dot2 = QLabel("●")
+        lbl_brand_dot2.setFont(QFont("Segoe UI", 8))
+        lbl_brand_dot2.setStyleSheet(f"color: {C['accent']}; background: transparent; border: none;")
+        tb_lay.addWidget(lbl_brand_dot2)
+        root.addWidget(self.title_bar)
 
         # ── TOP BAR (metallic panel) ──
         self.top_frame = QFrame()
@@ -1737,16 +1904,16 @@ class StudyTimerApp(QMainWindow):
         self.top_frame.setStyleSheet(f"""
             QFrame#topBar {{
                 background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                    stop:0 {pt}, stop:1 {pb});
+                    stop:0 {pt}, stop:0.5 {C['surface']}, stop:1 {pb});
                 border-top: 1px solid {bl};
-                border-bottom: 1px solid {C['bg']};
+                border-bottom: 2px solid {C['accent']};
             }}
         """)
-        _shadow(self.top_frame, C['shadow'], 18, 4)
+        _shadow(self.top_frame, C['shadow'], 24, 6)
 
         top_layout = QHBoxLayout(self.top_frame)
-        top_layout.setContentsMargins(24, 14, 24, 14)
-        top_layout.setSpacing(12)
+        top_layout.setContentsMargins(16, 12, 16, 12)
+        top_layout.setSpacing(8)
 
         # ── Left circle: Pomodoro timer ──
         self.timer_circle = CircularTimer()
@@ -1755,75 +1922,93 @@ class StudyTimerApp(QMainWindow):
         self.timer_circle.set_gauge_style(C.get('gauge_bg'), C.get('gauge_tick'))
         top_layout.addWidget(self.timer_circle, alignment=Qt.AlignVCenter)
 
-        # ── Center block (all content between the two circles) ──
-        center_widget = QWidget()
-        center_widget.setStyleSheet("background: transparent; border: none;")
-        center_lay = QVBoxLayout(center_widget)
-        center_lay.setContentsMargins(4, 0, 4, 0)
-        center_lay.setSpacing(2)
+        # ── Center block: recessed panel like Afterburner center ──
+        self.center_panel = QFrame()
+        self.center_panel.setObjectName("centerPanel")
+        self.center_panel.setStyleSheet(f"""
+            QFrame#centerPanel {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {C['bg']}, stop:1 {C['surface']});
+                border: 1px solid {C['border']};
+                border-top: 1px solid {bl};
+                border-radius: 4px;
+            }}
+        """)
+        _shadow(self.center_panel, C['shadow'], 10, 2)
+        center_lay = QVBoxLayout(self.center_panel)
+        center_lay.setContentsMargins(12, 8, 12, 8)
+        center_lay.setSpacing(6)
 
         # Subject name
         self.lbl_subject = QLabel(t('choose_subject'))
-        self.lbl_subject.setFont(QFont("Segoe UI", 14, QFont.DemiBold))
+        self.lbl_subject.setFont(QFont("Segoe UI", 13, QFont.Bold))
         self.lbl_subject.setStyleSheet(
-            f"color: {C['text']}; background: transparent;")
+            f"color: {C['text']}; background: transparent; letter-spacing: 0.5px;")
         self.lbl_subject.setWordWrap(True)
         self.lbl_subject.setAlignment(Qt.AlignCenter)
         center_lay.addWidget(self.lbl_subject)
 
         # Status text
         self.lbl_status = QLabel(t('not_started'))
-        self.lbl_status.setFont(QFont("Segoe UI", 10))
+        self.lbl_status.setFont(QFont("Segoe UI", 9, QFont.DemiBold))
         self.lbl_status.setStyleSheet(
-            f"color: {C['text_secondary']}; background: transparent;")
+            f"color: {C['accent']}; background: transparent; letter-spacing: 2px;")
         self.lbl_status.setAlignment(Qt.AlignCenter)
         center_lay.addWidget(self.lbl_status)
 
-        # ── Control row: action buttons + pomo/today labels ──
+        # ── Control row: action buttons ──
         ctrl_row = QHBoxLayout()
-        ctrl_row.setSpacing(6)
+        ctrl_row.setSpacing(8)
         ctrl_row.addStretch()
 
         # Primary action button (Start / Pause / Resume)
         self.btn_primary = QPushButton(f"▶  {t('btn_start')}")
-        self.btn_primary.setFixedHeight(34)
+        self.btn_primary.setFixedHeight(36)
         self.btn_primary.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_primary.setFont(QFont("Segoe UI", 11, QFont.DemiBold))
+        self.btn_primary.setFont(QFont("Segoe UI", 10, QFont.Bold))
         self.btn_primary.clicked.connect(self._toggle_start_pause)
         ctrl_row.addWidget(self.btn_primary)
 
         # Stop button
         self.btn_stop = QPushButton(f"■  {t('btn_stop')}")
-        self.btn_stop.setFixedHeight(34)
+        self.btn_stop.setFixedHeight(36)
         self.btn_stop.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_stop.setFont(QFont("Segoe UI", 10))
+        self.btn_stop.setFont(QFont("Arial", 9))
         self.btn_stop.clicked.connect(self._on_stop)
         ctrl_row.addWidget(self.btn_stop)
 
         # Finish (mark done + advance)
         self.btn_finish = QPushButton(f"✓  {t('btn_finish')}")
-        self.btn_finish.setFixedHeight(34)
+        self.btn_finish.setFixedHeight(36)
         self.btn_finish.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_finish.setFont(QFont("Segoe UI", 10))
+        self.btn_finish.setFont(QFont("Arial", 9))
         self.btn_finish.clicked.connect(self._on_skip)
         ctrl_row.addWidget(self.btn_finish)
 
-        # Pomodoro cycle label
-        self.lbl_pomo = QLabel("")
-        self.lbl_pomo.setFont(QFont("Segoe UI", 10))
-        self.lbl_pomo.setStyleSheet(
-            f"color: {C['text_muted']}; background: transparent;")
-        ctrl_row.addWidget(self.lbl_pomo)
-
-        # Today's total
-        self.lbl_today_total = QLabel("")
-        self.lbl_today_total.setFont(QFont("Segoe UI", 9))
-        self.lbl_today_total.setStyleSheet(
-            f"color: {C['text_muted']}; background: transparent;")
-        ctrl_row.addWidget(self.lbl_today_total)
-
         ctrl_row.addStretch()
         center_lay.addLayout(ctrl_row)
+
+        # ── Info row: pomodoro cycle + today total (centered below buttons) ──
+        info_row = QHBoxLayout()
+        info_row.setSpacing(12)
+        info_row.addStretch()
+
+        self.lbl_pomo = QLabel("")
+        self.lbl_pomo.setFont(QFont("Consolas", 8))
+        self.lbl_pomo.setStyleSheet(
+            f"color: {C['text_muted']}; background: transparent; letter-spacing: 1px;")
+        self.lbl_pomo.setAlignment(Qt.AlignCenter)
+        info_row.addWidget(self.lbl_pomo)
+
+        self.lbl_today_total = QLabel("")
+        self.lbl_today_total.setFont(QFont("Consolas", 8))
+        self.lbl_today_total.setStyleSheet(
+            f"color: {C['accent']}; background: transparent; letter-spacing: 1px;")
+        self.lbl_today_total.setAlignment(Qt.AlignCenter)
+        info_row.addWidget(self.lbl_today_total)
+
+        info_row.addStretch()
+        center_lay.addLayout(info_row)
 
         # Keep a list for resize handler
         self._ctrl_btns = [self.btn_primary, self.btn_stop, self.btn_finish]
@@ -1831,35 +2016,58 @@ class StudyTimerApp(QMainWindow):
         # Apply initial button states
         self._update_button_states()
 
+        # ── Thin divider ──
+        divider = QFrame()
+        divider.setFrameShape(QFrame.HLine)
+        divider.setFixedHeight(1)
+        divider.setStyleSheet(f"background: {C['border']}; border: none; margin: 0 8px;")
+        center_lay.addWidget(divider)
+        self._center_divider = divider
+
         # ── Utility row: compact icon buttons + checkboxes ──
         util_row = QHBoxLayout()
-        util_row.setSpacing(4)
+        util_row.setSpacing(5)
         util_row.addStretch()
         self._util_btns = []
 
         _dark_icon = '☀' if self.settings['darkMode'] else '🌙'
         _dark_tip = t('btn_light') if self.settings['darkMode'] else t('btn_dark')
+
+        _icon_btn_style = f"""
+            QPushButton {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {C['surface_hover']}, stop:1 {C['surface']});
+                color: {C['text_secondary']};
+                border: 1px solid {C['border']};
+                border-bottom: 2px solid {C.get('border', C['border'])};
+                border-radius: 8px; padding: 0;
+                font-size: 13px;
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {C['accent']}, stop:1 {C['accent_hover']});
+                color: #FFFFFF;
+                border-color: {C['accent_hover']};
+            }}
+            QPushButton:pressed {{
+                background: {C['accent_hover']};
+                border-top: 2px solid {C.get('border', C['border'])};
+                border-bottom: 1px solid {C.get('border', C['border'])};
+            }}
+        """
+
         for icon, tip, slot in [
-            ('📊', t('btn_stats'), self._show_stats),
+            ('▦', t('btn_stats'), self._show_stats),
             (_dark_icon, _dark_tip, self._toggle_dark),
-            ('🔲', t('mini_open'), self._open_mini),
-            ('🌐', t('btn_lang'), self._toggle_language),
+            ('⧉', t('mini_open'), self._open_mini),
+            ('⊕', t('btn_lang'), self._toggle_language),
         ]:
             b = QPushButton(icon)
             b.setToolTip(tip)
-            b.setFixedSize(28, 24)
+            b.setFixedSize(32, 28)
             b.setCursor(QCursor(Qt.PointingHandCursor))
-            b.setFont(QFont("Segoe UI", 10))
-            b.setStyleSheet(f"""
-                QPushButton {{
-                    background: {C['bg']}; color: {C['text_secondary']};
-                    border: 1px solid {C['border']};
-                    border-radius: 6px; padding: 0;
-                }}
-                QPushButton:hover {{
-                    background: {C['surface_hover']}; color: {C['text']};
-                }}
-            """)
+            b.setFont(QFont("Segoe UI", 12))
+            b.setStyleSheet(_icon_btn_style)
             b.clicked.connect(slot)
             util_row.addWidget(b)
             self._util_btns.append(b)
@@ -1869,29 +2077,53 @@ class StudyTimerApp(QMainWindow):
         # Small separator
         sep = QLabel("│")
         sep.setStyleSheet(f"color: {C['border']}; background: transparent;")
-        sep.setFont(QFont("Segoe UI", 8))
+        sep.setFont(QFont("Segoe UI", 9))
         util_row.addWidget(sep)
         self._util_sep = sep
 
+        _cb_style = f"""
+            QCheckBox {{
+                color: {C['text_secondary']};
+                background: transparent;
+                spacing: 5px;
+                font-size: 12px;
+            }}
+            QCheckBox::indicator {{
+                width: 14px; height: 14px;
+                border: 1px solid {C['border']};
+                border-radius: 3px;
+                background: {C['bg']};
+            }}
+            QCheckBox::indicator:checked {{
+                background: {C['accent']};
+                border-color: {C['accent']};
+                image: none;
+            }}
+            QCheckBox::indicator:hover {{
+                border-color: {C['accent']};
+            }}
+        """
+
         self.cb_pin = QCheckBox(t('btn_pin'))
         self.cb_pin.setFont(QFont("Segoe UI", 8))
-        self.cb_pin.setStyleSheet(
-            f"color: {C['text_secondary']}; background: transparent;")
+        self.cb_pin.setStyleSheet(_cb_style)
         self.cb_pin.stateChanged.connect(self._toggle_pin)
         util_row.addWidget(self.cb_pin)
 
         self.cb_auto = QCheckBox(t('autostart_label'))
         self.cb_auto.setFont(QFont("Segoe UI", 8))
         self.cb_auto.setChecked(self.settings.get('autoStart', True))
-        self.cb_auto.setStyleSheet(
-            f"color: {C['text_secondary']}; background: transparent;")
+        self.cb_auto.setStyleSheet(_cb_style.replace(
+            f"background: {C['accent']};\n                border-color: {C['accent']};",
+            f"background: {C['orange']};\n                border-color: {C['orange']};"
+        ))
         self.cb_auto.stateChanged.connect(self._toggle_autostart)
         util_row.addWidget(self.cb_auto)
 
         util_row.addStretch()
         center_lay.addLayout(util_row)
 
-        top_layout.addWidget(center_widget, stretch=1)
+        top_layout.addWidget(self.center_panel, stretch=1)
 
         # ── Right circle: Subject remaining timer ──
         self.subject_circle = CircularTimer()
@@ -2385,19 +2617,29 @@ class StudyTimerApp(QMainWindow):
     #  DRAG & DROP REORDER
     # ══════════════════════════════════════════════════
     def _on_reorder(self, from_idx, to_idx):
-        self.timetable.reorder_subject(self.selected_day, from_idx, to_idx)
+        # Swap subject content while keeping each time slot fixed
+        self.timetable.swap_subject_content(self.selected_day, from_idx, to_idx)
         self._load_cards()
 
     # ══════════════════════════════════════════════════
     #  CRUD
     # ══════════════════════════════════════════════════
     def _add_subject(self):
+        # Auto-calculate start time: end of last subject, or current time
+        classes = self.timetable.get_schedule_for_day(self.selected_day)
+        if classes:
+            last = classes[-1]
+            last_start = datetime.strptime(last['startTime'], '%H:%M')
+            auto_start = (last_start + timedelta(minutes=last['duration'])).strftime('%H:%M')
+        else:
+            auto_start = datetime.now().strftime('%H:%M')
+
         dlg = SubjectDialog(self, title_key="dlg_add_title", colors=self.C)
         if dlg.exec_() == QDialog.Accepted:
             d = dlg.get_data()
             self.timetable.add_subject(
                 self.selected_day, d['subject'],
-                d['startTime'], d['duration'], d['notes'],
+                auto_start, d['duration'], d['notes'],
                 d['workMinutes'], d['breakMinutes'])
             self._load_cards()
 
@@ -2406,7 +2648,6 @@ class StudyTimerApp(QMainWindow):
         dlg = SubjectDialog(
             self, title_key="dlg_edit_title",
             subject=cls['subject'],
-            start_time=cls['startTime'],
             duration=cls['duration'],
             notes=cls.get('notes', ''),
             work_min=cls.get('workMinutes', 0),
@@ -2415,10 +2656,13 @@ class StudyTimerApp(QMainWindow):
         )
         if dlg.exec_() == QDialog.Accepted:
             d = dlg.get_data()
+            # Keep original start time; only duration/name/notes/pomo can change
             self.timetable.edit_subject(
                 self.selected_day, index,
-                d['subject'], d['startTime'], d['duration'], d['notes'],
+                d['subject'], cls['startTime'], d['duration'], d['notes'],
                 d['workMinutes'], d['breakMinutes'])
+            # Cascade: fix start times of all subsequent subjects
+            self.timetable.cascade_start_times(self.selected_day, index + 1)
             self._load_cards()
 
     def _delete_subject(self, index):
@@ -2708,10 +2952,11 @@ class StudyTimerApp(QMainWindow):
 
         if state == 'running':
             self._session_work_secs += 1
+        if state in ('running', 'break'):
             self._subject_elapsed_secs += 1
 
         # ── Auto-advance: check if subject total study time OR wall-clock elapsed reached ──
-        if (state == 'running'
+        if (state in ('running', 'break')
                 and 0 <= self.active_idx < len(self.day_classes)):
             cls = self.day_classes[self.active_idx]
             subject_total_sec = cls['duration'] * 60
