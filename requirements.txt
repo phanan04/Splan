@@ -1,0 +1,4 @@
+PyQt5>=5.15.0
+
+# Optional: Windows toast notifications (install manually if needed)
+# win10toast==0.9

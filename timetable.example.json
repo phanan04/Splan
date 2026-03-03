@@ -1,0 +1,25 @@
+{
+  "schedule": {
+    "Monday": [],
+    "Tuesday": [
+      {
+        "subject": "Môn học 1",
+        "startTime": "08:00",
+        "duration": 60,
+        "notes": "Ghi chú tùy chọn",
+        "workMinutes": 25,
+        "breakMinutes": 5
+      }
+    ],
+    "Wednesday": [],
+    "Thursday": [],
+    "Friday": [],
+    "Saturday": [],
+    "Sunday": []
+  },
+  "breakConfig": {
+    "workDurationMinutes": 25,
+    "breakDurationMinutes": 5,
+    "enableNotifications": true
+  }
+}
