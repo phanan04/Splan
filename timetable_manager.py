@@ -29,23 +29,25 @@ class TimetableManager:
     
     def _load_timetable(self) -> None:
         """Tải dữ liệu lịch từ file JSON"""
+        default_schedule = {d: [] for d in self.DAY_NAMES}
+        default_config = {
+            'workDurationMinutes': 25,
+            'breakDurationMinutes': 5,
+            'enableNotifications': True
+        }
+        if not os.path.exists(self.timetable_file):
+            self.schedule = default_schedule
+            self.break_config = default_config
+            self._save_timetable()
+            return
         try:
-            if not os.path.exists(self.timetable_file):
-                raise FileNotFoundError(f"Không tìm thấy file {self.timetable_file}")
-            
             with open(self.timetable_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                self.schedule = data.get('schedule', {})
-                self.break_config = data.get('breakConfig', {
-                    'workDurationMinutes': 30,
-                    'breakDurationMinutes': 5,
-                    'enableNotifications': True
-                })
-            
-            print(f"✓ Tải lịch thành công từ {self.timetable_file}")
-        except Exception as e:
-            print(f"✗ Lỗi tải timetable: {e}")
-            raise
+                self.schedule = data.get('schedule', default_schedule)
+                self.break_config = data.get('breakConfig', default_config)
+        except Exception:
+            self.schedule = default_schedule
+            self.break_config = default_config
     
     def get_current_subject(self) -> Optional[Dict]:
         """

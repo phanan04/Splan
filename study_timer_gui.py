@@ -45,8 +45,19 @@ from calendar_sync import export_ics, import_ics
 # ═══════════════════════════════════════════════════════════
 #  SETTINGS
 # ═══════════════════════════════════════════════════════════
-_SETTINGS_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'settings.json')
+def _user_data_dir() -> str:
+    """Return %APPDATA%\\StudyTimer (Windows) or ~/.studytimer (Linux/macOS).
+    Created on first access."""
+    if platform.system() == 'Windows':
+        base = os.environ.get('APPDATA', os.path.expanduser('~'))
+    else:
+        base = os.path.expanduser('~')
+        return os.path.join(base, '.studytimer')
+    d = os.path.join(base, 'StudyTimer')
+    os.makedirs(d, exist_ok=True)
+    return d
+
+_SETTINGS_FILE = os.path.join(_user_data_dir(), 'settings.json')
 
 
 def _load_settings() -> dict:
@@ -1353,9 +1364,23 @@ class StudyTimerApp(QMainWindow):
             self.cb_pin.setChecked(True)
 
     @staticmethod
-    def _path(name):
-        return os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), name)
+    def _bundle_dir():
+        """Directory where bundled read-only resources live (temp dir when frozen)."""
+        if getattr(sys, 'frozen', False):
+            return sys._MEIPASS
+        return os.path.dirname(os.path.abspath(__file__))
+
+    @classmethod
+    def _path(cls, name):
+        """Path for user data file in APPDATA. Auto-copies from bundled example on first run."""
+        dest = os.path.join(_user_data_dir(), name)
+        if not os.path.exists(dest):
+            # Try to seed from bundled example
+            example = os.path.join(cls._bundle_dir(), name.replace('.json', '.example.json'))
+            if os.path.exists(example):
+                import shutil
+                shutil.copy2(example, dest)
+        return dest
 
     # ══════════════════════════════════════════════════
     #  SHORTCUTS

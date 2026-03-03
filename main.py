@@ -30,32 +30,39 @@ Cấu trúc dự án:
 import sys
 import os
 
-# Thêm thư mục hiện tại vào path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+
+def _ensure_single_instance():
+    """On Windows: use a named mutex. On other OS: skip."""
+    import platform
+    if platform.system() != 'Windows':
+        return None  # Allow multiple on non-Windows for dev
+    import ctypes
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "StudyTimer_SingleInstance_Mutex")
+    last_err = ctypes.windll.kernel32.GetLastError()
+    if last_err == 183:  # ERROR_ALREADY_EXISTS
+        # Bring existing window to foreground
+        from ctypes import wintypes
+        FindWindow = ctypes.windll.user32.FindWindowW
+        SetForegroundWindow = ctypes.windll.user32.SetForegroundWindow
+        ShowWindow = ctypes.windll.user32.ShowWindow
+        hwnd = FindWindow(None, "Study Timer")
+        if hwnd:
+            ShowWindow(hwnd, 9)        # SW_RESTORE
+            SetForegroundWindow(hwnd)
+        sys.exit(0)
+    return mutex  # Keep reference alive for process lifetime
+
 
 from study_timer_gui import main
 
 if __name__ == "__main__":
-    # Đảm bảo PyQt5 đã cài đặt
     try:
         from PyQt5.QtWidgets import QApplication
     except ImportError:
-        print("❌ PyQt5 không được cài đặt!")
-        print("📦 Cài đặt bằng lệnh: pip install PyQt5")
+        print("PyQt5 không được cài đặt. Chạy: pip install PyQt5")
         sys.exit(1)
 
-    # Kiểm tra file timetable.json
-    timetable_path = os.path.join(
-        os.path.dirname(__file__),
-        'timetable.json'
-    )
-
-    if not os.path.exists(timetable_path):
-        print("⚠️ Cảnh báo: Không tìm thấy file timetable.json")
-        print(f"   Đường dẫn: {timetable_path}")
-        print("   Ứng dụng sẽ tạo tệp mặc định hoặc sử dụng lịch rỗng")
-
-    # Khởi chạy ứng dụng
-    print("🚀 Khởi động Study Timer v7.0 — Feature-Rich Edition")
-    print("   Phím tắt: Space=play/pause  S=stop  N=next  D=theme  M=mini  1-7=day  Ctrl+N=add")
+    _mutex = _ensure_single_instance()
     main()

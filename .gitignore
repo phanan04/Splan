@@ -15,6 +15,7 @@ env/
 *.egg-info/
 dist/
 build/
+*.spec
 
 # Personal user data (use *.example.json as templates)
 settings.json
