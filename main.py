@@ -34,7 +34,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def _ensure_single_instance():
-    """On Windows: use a named mutex. On other OS: skip."""
+    """On Windows: use a named mutex + named event for IPC. On other OS: skip."""
     import platform
     if platform.system() != 'Windows':
         return None  # Allow multiple on non-Windows for dev
@@ -42,15 +42,15 @@ def _ensure_single_instance():
     mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "StudyTimer_SingleInstance_Mutex")
     last_err = ctypes.windll.kernel32.GetLastError()
     if last_err == 183:  # ERROR_ALREADY_EXISTS
-        # Bring existing window to foreground
-        from ctypes import wintypes
-        FindWindow = ctypes.windll.user32.FindWindowW
-        SetForegroundWindow = ctypes.windll.user32.SetForegroundWindow
-        ShowWindow = ctypes.windll.user32.ShowWindow
-        hwnd = FindWindow(None, "Study Timer")
-        if hwnd:
-            ShowWindow(hwnd, 9)        # SW_RESTORE
-            SetForegroundWindow(hwnd)
+        # Signal the existing instance to restore/show itself via a named event.
+        # This avoids using Win32 ShowWindow on the Qt HWND directly, which would
+        # show the window but bypass Qt's paint system and leave it blank/white.
+        EVENT_MODIFY_STATE = 0x0002
+        event_handle = ctypes.windll.kernel32.OpenEventW(
+            EVENT_MODIFY_STATE, False, "StudyTimer_ShowEvent")
+        if event_handle:
+            ctypes.windll.kernel32.SetEvent(event_handle)
+            ctypes.windll.kernel32.CloseHandle(event_handle)
         sys.exit(0)
     return mutex  # Keep reference alive for process lifetime
 

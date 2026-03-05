@@ -172,6 +172,13 @@ class TimetableManager:
         """Lấy lịch cho một ngày cụ thể"""
         return self.schedule.get(day, [])
 
+    def update_start_time_only(self, day: str, index: int, new_start: str) -> None:
+        """Cập nhật startTime của môn học tại vị trí index mà không sắp xếp lại.
+        Dùng khi user bấm bắt đầu muộn — giữ nguyên thứ tự card."""
+        if day in self.schedule and 0 <= index < len(self.schedule[day]):
+            self.schedule[day][index]['startTime'] = new_start
+            self._save_timetable()
+
     def add_subject(self, day: str, subject: str, start_time: str,
                     duration: int, notes: str = '',
                     work_minutes: int = 0, break_minutes: int = 0) -> None:

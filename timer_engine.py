@@ -288,10 +288,20 @@ class TimerEngine:
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($APP_ID).Show($toast)
         """
         try:
+            # CREATE_NO_WINDOW prevents PowerShell console flashing and stealing
+            # window focus, which would hide Qt.Tool windows like the mini timer.
+            import ctypes
+            CREATE_NO_WINDOW = 0x08000000
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0  # SW_HIDE
             subprocess.run(
-                ["powershell", "-Command", ps_script],
+                ["powershell", "-WindowStyle", "Hidden", "-NonInteractive",
+                 "-Command", ps_script],
                 capture_output=True,
-                timeout=5
+                timeout=5,
+                creationflags=CREATE_NO_WINDOW,
+                startupinfo=startupinfo,
             )
         except Exception as e:
             print(f"⚠️ Không gửi được thông báo PowerShell: {e}")
