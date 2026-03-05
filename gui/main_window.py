@@ -1756,11 +1756,10 @@ class StudyTimerApp(QMainWindow):
 
         if state == 'running':
             self._session_work_secs += 1
-        if state in ('running', 'break'):
             self._subject_elapsed_secs += 1
 
         # ── Auto-advance: check if subject total study time OR wall-clock elapsed reached ──
-        if (state in ('running', 'break')
+        if (state == 'running'
                 and 0 <= self.active_idx < len(self.day_classes)):
             cls = self.day_classes[self.active_idx]
             subject_total_sec = cls['duration'] * 60
